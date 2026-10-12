@@ -1,0 +1,21 @@
+{
+    "id": "./",
+    "name": "My Cloud Service",
+    "short_name": "My Cloud",
+    "description": "Upload, preview, and manage media in Supabase Storage.",
+    "start_url": "./",
+    "scope": "./",
+    "display": "standalone",
+    "orientation": "any",
+    "categories": ["productivity", "utilities"],
+    "background_color": "#f4f6f3",
+    "theme_color": "#f4f6f3",
+    "icons": [
+        {
+            "src": "./icon.svg",
+            "sizes": "any",
+            "type": "image/svg+xml",
+            "purpose": "any maskable"
+        }
+    ]
+}

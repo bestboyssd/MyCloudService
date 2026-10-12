@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="A focused workspace for uploading, previewing, and managing media in Supabase Storage.">
+    <meta name="theme-color" content="#f4f6f3">
+    <title>My Cloud Service | Storage workspace</title>
+    <link rel="icon" type="image/svg+xml" href="icon.svg">
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="stylesheet" href="styles.css?v=29">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+    <script src="script.js?v=29" defer></script>
+</head>
+<body data-theme="light" data-mobile-view="upload">
+    <script>
+        (() => {
+            try {
+                const theme = localStorage.getItem("my-cloud-service-theme") === "dark" ? "dark" : "light";
+                document.body.dataset.theme = theme;
+                const themeMeta = document.querySelector('meta[name="theme-color"]');
+                if (themeMeta) themeMeta.content = theme === "dark" ? "#141a16" : "#f4f6f3";
+            } catch {}
+        })();
+    </script>
+    <div id="message" class="toast" hidden aria-live="polite"></div>
+    <a class="skip-link" href="#main-content">Skip to workspace</a>
+
+    <div class="app-shell">
+        <header class="hero">
+            <div class="hero__brand">
+                <div class="brand-mark" aria-hidden="true">
+                    <img src="icon.svg" alt="">
+                </div>
+                <div class="brand-copy">
+                    <span class="eyebrow">Storage workspace</span>
+                    <h1>My Cloud Service</h1>
+                    <p>Supabase Storage <span aria-hidden="true">&middot;</span> files bucket</p>
+                </div>
+            </div>
+
+            <div class="hero__actions">
+                <span id="connectionStatus" class="status-chip" role="status">Checking connection&hellip;</span>
+                <button id="themeToggle" class="button ghost" type="button" aria-label="Switch to dark mode" aria-pressed="false">Dark Mode</button>
+                <button id="settingsBtn" class="button secondary" type="button" aria-haspopup="dialog">Settings</button>
+                <button id="refreshBtn" class="button ghost" type="button" aria-label="Refresh file library">Refresh</button>
+            </div>
+
+            <div class="hero__metrics">
+                <article class="metric-card reveal-on-scroll">
+                    <span class="metric-card__label">Queue</span>
+                    <strong id="queueMetric">0 files</strong>
+                </article>
+                <article class="metric-card reveal-on-scroll">
+                    <span class="metric-card__label">Files</span>
+                    <strong id="libraryMetric">0 files</strong>
+                </article>
+                <article class="metric-card reveal-on-scroll">
+                    <span class="metric-card__label">Usage</span>
+                    <strong id="usageMetric">0 B</strong>
+                </article>
+            </div>
+        </header>
+
+        <main id="main-content" class="dashboard">
+            <section id="uploadPanel" class="upload-layout">
+                <article class="upload-card glass-panel tilt-panel reveal-on-scroll">
+                    <div class="card-heading">
+                        <div>
+                            <span class="eyebrow">Upload</span>
+                            <h2>Add files</h2>
+                        </div>
+                        <p class="surface-note">Public bucket &middot; anonymous uploads</p>
+                    </div>
+
+                    <label id="uploadArea" class="upload-dropzone" for="fileInput" role="button" tabindex="0" aria-describedby="uploadHint">
+                        <input id="fileInput" type="file" accept="image/*,video/*" multiple hidden aria-label="Choose images or videos to upload">
+                        <div class="dropzone__halo"></div>
+                        <div class="dropzone__content">
+                            <div class="dropzone__badge" aria-hidden="true">
+                                <img src="upload-orb.svg" class="dropzone__icon" alt="">
+                            </div>
+                            <h3>Drop files to upload</h3>
+                            <p>or choose files from your device</p>
+                            <div class="dropzone__hints">
+                                <span>Images and videos</span>
+                                <span>Multiple files at once</span>
+                            </div>
+                        </div>
+                    </label>
+
+                    <div class="upload-actions">
+                        <button id="browseBtn" class="button secondary" type="button">Choose Files</button>
+                        <button id="clearQueueBtn" class="button ghost" type="button" disabled>Clear Queue</button>
+                        <button id="uploadSelectedBtn" class="button primary" type="button" disabled>Upload Selected</button>
+                    </div>
+
+                    <p id="uploadHint" class="hint-line" role="status" aria-live="polite"></p>
+                </article>
+
+                <aside class="queue-card glass-panel reveal-on-scroll">
+                    <div class="card-heading">
+                        <div>
+                            <span class="eyebrow">Ready to upload</span>
+                            <h2>Upload queue</h2>
+                        </div>
+                        <div class="inline-actions">
+                            <button id="selectAllBtn" class="button ghost compact" type="button">Select All</button>
+                            <button id="deselectAllBtn" class="button ghost compact" type="button">Deselect All</button>
+                        </div>
+                    </div>
+
+                    <div class="queue-summary">
+                        <span id="queueSummary">No files staged yet.</span>
+                        <span id="selectionSummary">0 selected</span>
+                    </div>
+
+                    <div id="previewList" class="preview-list" aria-live="polite"></div>
+                </aside>
+            </section>
+
+            <section id="progressSection" class="progress-card glass-panel reveal-on-scroll" hidden role="status" aria-live="polite" aria-busy="false">
+                <div class="card-heading">
+                    <div>
+                        <span class="eyebrow">Transfer</span>
+                        <h2>Upload progress</h2>
+                    </div>
+                    <div class="progress-card__actions">
+                        <button id="cancelUploadBtn" class="button ghost compact" type="button" hidden>Cancel uploads</button>
+                        <p id="progressPercent" class="surface-note">0%</p>
+                    </div>
+                </div>
+
+                <div class="progress-bar" role="progressbar" aria-label="Upload progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                    <div id="progressFill" class="progress-fill"></div>
+                </div>
+
+                <div class="progress-meta">
+                    <span id="progressText">Waiting for uploads</span>
+                    <span id="speedText">Speed: --</span>
+                    <span id="etaText">ETA: --</span>
+                </div>
+            </section>
+
+            <section id="librarySection" class="library-section glass-panel reveal-on-scroll" aria-labelledby="libraryTitle">
+                <div class="library-header">
+                    <div>
+                        <span class="eyebrow">Storage</span>
+                        <h2 id="libraryTitle">Files</h2>
+                    </div>
+
+                    <div class="inline-actions">
+                        <button id="loadFilesBtn" class="button primary" type="button" aria-controls="filesList">Load Library</button>
+                        <button id="statsBtn" class="button secondary" type="button">Statistics</button>
+                        <button id="exportBtn" class="button ghost" type="button">Export List</button>
+                    </div>
+                </div>
+
+                <div class="toolbar">
+                    <div class="field">
+                        <label for="searchInput">Search</label>
+                        <span class="input-with-action">
+                            <input id="searchInput" type="search" placeholder="Search files..." aria-controls="filesList">
+                            <button id="clearSearchBtn" class="field__clear" type="button" aria-label="Clear search" hidden>&times;</button>
+                        </span>
+                    </div>
+
+                    <label class="field">
+                        <span>Sort</span>
+                        <select id="sortSelect">
+                            <option value="created_at">Newest first</option>
+                            <option value="name">Name</option>
+                            <option value="size">Size</option>
+                        </select>
+                    </label>
+
+                    <label class="field">
+                        <span>Filter</span>
+                        <select id="filterSelect">
+                            <option value="all">All files</option>
+                            <option value="image">Images</option>
+                            <option value="video">Videos</option>
+                            <option value="favorite">Favorites</option>
+                        </select>
+                    </label>
+
+                    <div class="toolbar__actions">
+                        <button id="toggleViewBtn" class="button ghost" type="button">Compact view</button>
+                        <button id="selectVisibleBtn" class="button ghost" type="button">Select Visible</button>
+                    </div>
+                </div>
+
+                <div id="bulkActions" class="selection-toolbar" hidden>
+                    <span id="bulkCount">0 selected</span>
+                    <button id="favoriteSelectedBtn" class="button ghost compact" type="button">Favorite</button>
+                    <button id="shareSelectedBtn" class="button secondary compact" type="button">Copy Links</button>
+                    <button id="downloadSelectedBtn" class="button ghost compact" type="button">Download</button>
+                    <button id="deleteSelectedBtn" class="button danger compact" type="button">Delete</button>
+                </div>
+
+                <div class="files-meta">
+                    <span id="filesCountLabel">Library not loaded</span>
+                    <span id="storageUsageLabel">Usage: 0 B</span>
+                </div>
+
+                <div id="filesList" class="files-list grid-view" aria-live="polite" aria-busy="false"></div>
+                <div id="loadMoreSentinel" class="load-more" role="status" hidden>Scroll to load more files</div>
+            </section>
+        </main>
+
+        <div id="mobileNav" class="mobile-nav" role="group" aria-label="Workspace sections">
+            <button id="uploadTab" class="mobile-nav__button is-active" type="button" data-mobile-view="upload" aria-controls="uploadPanel" aria-pressed="true">Upload</button>
+            <button id="filesTab" class="mobile-nav__button" type="button" data-mobile-view="files" aria-controls="librarySection" aria-pressed="false">Files</button>
+        </div>
+    </div>
+
+    <section id="settingsModal" class="modal settings-modal" hidden aria-labelledby="settingsTitle" aria-modal="true" role="dialog">
+        <div class="modal__backdrop" data-close-modal></div>
+        <div class="modal__panel glass-panel settings-panel">
+            <div class="modal__header">
+                <div>
+                    <span class="eyebrow">Preferences</span>
+                    <h2 id="settingsTitle">Settings</h2>
+                </div>
+                <button class="icon-button" type="button" data-close-modal aria-label="Close settings">Close</button>
+            </div>
+
+            <div class="modal__body settings-layout">
+                <section class="settings-hero-card">
+                    <div>
+                    <span class="eyebrow">Preferences</span>
+                    <h3>Workspace settings</h3>
+                    <p>Choose how uploads are staged and displayed in this browser.</p>
+                    </div>
+                    <div class="settings-hero-card__badge">
+                        <strong>Local only</strong>
+                        <span>Saved in this browser</span>
+                    </div>
+                </section>
+
+                <div class="settings-grid">
+                    <label class="settings-card settings-card--toggle" for="autoLoad">
+                        <div class="settings-card__copy">
+                            <span class="settings-card__eyebrow">Automation</span>
+                            <strong>Auto-load library</strong>
+                            <small>Refresh the library automatically after successful uploads.</small>
+                        </div>
+                        <span class="switch">
+                            <input id="autoLoad" class="switch__input" type="checkbox">
+                            <span class="switch__track">
+                                <span class="switch__thumb"></span>
+                            </span>
+                        </span>
+                    </label>
+
+                    <label class="settings-card settings-card--field" for="maxFileSize">
+                        <div class="settings-card__copy">
+                            <span class="settings-card__eyebrow">Capacity</span>
+                            <strong>Maximum file size</strong>
+                            <small>Choose the largest file you want to accept in the queue.</small>
+                        </div>
+                        <div class="settings-card__input">
+                    <input id="maxFileSize" type="number" min="1" max="2048" step="1" inputmode="numeric">
+                            <span>MB</span>
+                        </div>
+                    </label>
+
+                    <label class="settings-card settings-card--toggle" for="compression">
+                        <div class="settings-card__copy">
+                            <span class="settings-card__eyebrow">Efficiency</span>
+                            <strong>Image compression</strong>
+                            <small>Downscale and compress staged images before upload when possible.</small>
+                        </div>
+                        <span class="switch">
+                            <input id="compression" class="switch__input" type="checkbox">
+                            <span class="switch__track">
+                                <span class="switch__thumb"></span>
+                            </span>
+                        </span>
+                    </label>
+
+                    <label class="settings-card settings-card--toggle" for="reduceMotion">
+                        <div class="settings-card__copy">
+                            <span class="settings-card__eyebrow">Motion</span>
+                            <strong>Reduced motion</strong>
+                            <small>Reduce transitions and other motion effects.</small>
+                        </div>
+                        <span class="switch">
+                            <input id="reduceMotion" class="switch__input" type="checkbox">
+                            <span class="switch__track">
+                                <span class="switch__thumb"></span>
+                            </span>
+                        </span>
+                    </label>
+                </div>
+
+                <section class="shortcut-panel">
+                    <div class="shortcut-panel__header">
+                        <div>
+                            <span class="settings-card__eyebrow">Quick actions</span>
+                            <strong>Keyboard shortcuts</strong>
+                        </div>
+                        <p>Move around the workspace faster.</p>
+                    </div>
+                    <div class="shortcut-grid">
+                        <div class="shortcut-chip"><kbd>Ctrl</kbd><span>+</span><kbd>U</kbd><small>Open file picker</small></div>
+                        <div class="shortcut-chip"><kbd>Ctrl</kbd><span>+</span><kbd>S</kbd><small>Load library</small></div>
+                        <div class="shortcut-chip"><kbd>Ctrl</kbd><span>+</span><kbd>D</kbd><small>Toggle theme</small></div>
+                        <div class="shortcut-chip"><kbd>Ctrl</kbd><span>+</span><kbd>F</kbd><small>Focus search</small></div>
+                        <div class="shortcut-chip"><kbd>Esc</kbd><small>Close open dialogs</small></div>
+                    </div>
+                </section>
+            </div>
+
+            <div class="modal__footer settings-footer">
+                <p class="settings-footer__note">Changes save locally and apply as soon as you press save.</p>
+                <button id="saveSettingsBtn" class="button primary" type="button">Save Settings</button>
+            </div>
+        </div>
+    </section>
+
+    <section id="fileInfoModal" class="modal" hidden aria-labelledby="fileInfoTitle" aria-modal="true" role="dialog">
+        <div class="modal__backdrop" data-close-modal></div>
+        <div class="modal__panel glass-panel">
+            <div class="modal__header">
+                <div>
+                    <span class="eyebrow">Metadata</span>
+                    <h2 id="fileInfoTitle">File information</h2>
+                </div>
+                <button class="icon-button" type="button" data-close-modal aria-label="Close file information">Close</button>
+            </div>
+            <div id="fileInfoContent" class="modal__body"></div>
+        </div>
+    </section>
+
+    <section id="statsModal" class="modal" hidden aria-labelledby="statsTitle" aria-modal="true" role="dialog">
+        <div class="modal__backdrop" data-close-modal></div>
+        <div class="modal__panel glass-panel">
+            <div class="modal__header">
+                <div>
+                    <span class="eyebrow">Overview</span>
+                    <h2 id="statsTitle">Storage statistics</h2>
+                </div>
+                <button class="icon-button" type="button" data-close-modal aria-label="Close statistics">Close</button>
+            </div>
+            <div id="statsContent" class="modal__body"></div>
+        </div>
+    </section>
+
+    <section id="viewerModal" class="modal media-viewer" hidden aria-labelledby="viewerTitle" aria-modal="true" role="dialog">
+        <div class="modal__backdrop" data-close-modal></div>
+        <div id="viewerPanel" class="modal__panel glass-panel viewer-panel">
+            <button class="icon-button viewer-close" type="button" data-close-modal aria-label="Close media viewer">&times;</button>
+            <div class="modal__header viewer-header">
+                <div>
+                    <span class="eyebrow">Preview</span>
+                    <h2 id="viewerTitle">Media viewer</h2>
+                </div>
+            </div>
+
+            <div class="viewer-layout">
+                <div id="viewerStage" class="viewer-stage" aria-live="polite"></div>
+                <div class="viewer-footer">
+                    <span id="viewerKindPill" class="file-pill">File</span>
+                    <h3 id="viewerName">Preview</h3>
+                    <p id="viewerMeta" class="surface-note">Choose a file to view.</p>
+                    <p id="viewerNote" class="viewer-note">Open images and videos at full frame with no crop.</p>
+                    <div class="viewer-footer__actions">
+                        <button id="viewerShareBtn" class="button ghost compact" type="button">Share</button>
+                        <button id="viewerDownloadBtn" class="button secondary compact" type="button">Download</button>
+                        <button id="viewerInfoBtn" class="button ghost compact" type="button">Info</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="fileActionModal" class="modal action-modal" hidden aria-labelledby="fileActionTitle" aria-modal="true" role="dialog">
+        <div class="modal__backdrop" data-close-modal></div>
+        <div class="modal__panel glass-panel action-panel">
+            <div class="modal__header">
+                <div>
+                    <span class="eyebrow">Media Actions</span>
+                    <h2 id="fileActionTitle">File tools</h2>
+                </div>
+                <button class="icon-button" type="button" data-close-modal aria-label="Close file actions">Close</button>
+            </div>
+
+            <div class="action-panel__summary">
+                <div id="actionThumb" class="action-thumb" aria-hidden="true"></div>
+                <div class="action-summary__copy">
+                    <h3 id="actionName">Selected file</h3>
+                    <p id="actionMeta" class="surface-note">Choose what you want to do with this media.</p>
+                </div>
+            </div>
+
+            <div class="action-grid">
+                <button id="actionPreviewBtn" class="button primary" type="button">Open Preview</button>
+                <button id="actionSelectBtn" class="button ghost" type="button">Select</button>
+                <button id="actionShareBtn" class="button secondary" type="button">Share</button>
+                <button id="actionRenameBtn" class="button ghost" type="button">Rename</button>
+                <button id="actionDownloadBtn" class="button ghost" type="button">Download</button>
+                <button id="actionInfoBtn" class="button ghost" type="button">Info</button>
+                <button id="actionDeleteBtn" class="button danger" type="button">Delete</button>
+            </div>
+        </div>
+    </section>
+
+    <section id="renameModal" class="modal" hidden aria-labelledby="renameTitle" aria-modal="true" role="dialog">
+        <div class="modal__backdrop" data-close-modal></div>
+        <div class="modal__panel glass-panel">
+            <div class="modal__header">
+                <div>
+                    <span class="eyebrow">Library Action</span>
+                    <h2 id="renameTitle">Rename file</h2>
+                </div>
+                <button class="icon-button" type="button" data-close-modal aria-label="Close rename dialog">Close</button>
+            </div>
+            <div class="modal__body modal-grid">
+                <div class="info-item">
+                    <strong>Current file</strong>
+                    <span id="renameCurrentName">-</span>
+                </div>
+                <label class="field field--stacked" for="renameInput">
+                    <span>New file name</span>
+                    <input id="renameInput" type="text" placeholder="Enter a new name" autocomplete="off" spellcheck="false">
+                </label>
+                <p class="surface-note">The original file extension will be preserved automatically.</p>
+            </div>
+            <div class="modal__footer">
+                <button id="renameSubmitBtn" class="button primary" type="button">Save Name</button>
+            </div>
+        </div>
+    </section>
+
+    <noscript>
+        <div class="noscript-banner">JavaScript is required to use uploads, previews, and Supabase storage features.</div>
+    </noscript>
+</body>
+</html>
