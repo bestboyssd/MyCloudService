@@ -5259,7 +5259,6 @@ body[data-theme] .preview-card__reorder {
 @media (max-width: 760px) {
     body[data-theme] .library-header .inline-actions #statsBtn,
     body[data-theme] .library-header .inline-actions #exportBtn,
-    body[data-theme] .library-section > .toolbar,
     body[data-theme] .library-section > .files-meta {
         display: none;
     }
@@ -5766,7 +5765,7 @@ body[data-theme] .preview-card__reorder {
     }
 
     body[data-theme] .upload-card .surface-note {
-        font-size: 9px;
+        font-size: 10px;
     }
 
     body[data-theme] .dropzone__badge {
@@ -5801,12 +5800,46 @@ body[data-theme] .preview-card__reorder {
     body[data-theme] .upload-card .surface-note {
         max-width: 42%;
         padding: 5px 6px;
-        font-size: 8px;
+        font-size: 10px;
     }
 
     body[data-theme] .library-header > .inline-actions #loadFilesBtn {
         min-height: 42px;
         padding-inline: 10px;
         font-size: 12px;
+    }
+}
+
+@media (max-width: 760px) {
+    body[data-theme] .files-list .file-card__controls {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        min-height: 52px;
+        margin-top: auto;
+        padding: 6px 8px;
+        border-top: 1px solid var(--border-soft);
+        background: var(--panel-soft);
+    }
+
+    body[data-theme] .files-list .file-card__select,
+    body[data-theme] .files-list .file-card__favorite,
+    body[data-theme] .files-list .file-card__menu {
+        position: static;
+        inset: auto;
+        width: 40px;
+        min-width: 40px;
+        height: 40px;
+        min-height: 40px;
+        border-radius: 12px;
+        background: var(--panel);
+        box-shadow: none;
+        backdrop-filter: none;
+    }
+
+    body[data-theme] .files-list .file-card__utility {
+        width: auto;
+        margin-left: auto;
+        gap: 6px;
     }
 }
