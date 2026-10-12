@@ -3142,10 +3142,12 @@ body[data-theme] .upload-actions {
 
 body[data-theme] .hint-line {
     min-height: 0;
-    padding: 8px 10px;
-    border: 1px solid var(--border-soft);
-    border-radius: 6px;
-    background: var(--panel-soft);
+    margin: 5px 0 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    line-height: 1.45;
 }
 
 body[data-theme] .queue-summary {
