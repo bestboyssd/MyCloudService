@@ -35,6 +35,7 @@ const elements = {
     connectionStatus: $("connectionStatus"),
     brandTitleRow: document.querySelector(".brand-copy__title-row"),
     heroActions: document.querySelector(".hero__actions"),
+    uploadNote: document.querySelector(".upload-card .surface-note"),
     themeToggle: $("themeToggle"),
     settingsBtn: $("settingsBtn"),
     refreshBtn: $("refreshBtn"),
@@ -183,6 +184,10 @@ function init() {
 
 function placeConnectionStatus() {
     const isMobile = window.matchMedia("(max-width: 760px)").matches;
+    const libraryLabel = isMobile ? "Refresh Library" : "Load Library";
+    elements.loadFilesBtn.dataset.defaultText = libraryLabel;
+    elements.loadFilesBtn.textContent = libraryLabel;
+    elements.uploadNote.textContent = isMobile ? "Anonymous uploads" : "Anonymous uploads only";
     const destination = isMobile ? elements.brandTitleRow : elements.heroActions;
     if (!destination || elements.connectionStatus.parentElement === destination) return;
     if (isMobile) {
@@ -1381,7 +1386,7 @@ function openMediaViewer(fileName) {
     elements.viewerName.textContent = display;
     elements.viewerMeta.textContent = `${formatBytes(getFileSize(file))} - ${formatDate(file.created_at || file.updated_at)}`;
     elements.viewerNote.textContent = kind === "video"
-        ? "Preparing smoother playback for this video..."
+        ? "Starting video playback..."
         : kind === "image"
             ? "Opening full-frame image preview."
             : "Open the public file link from the information panel if you need more actions.";
@@ -1399,13 +1404,7 @@ function openMediaViewer(fileName) {
     }
 
     if (kind === "video") {
-        elements.viewerStage.innerHTML = `
-            <div class="viewer-stage__frame is-video viewer-stage__loading">
-                <div class="viewer-loader" aria-hidden="true"></div>
-                <strong>Optimizing playback</strong>
-                <p>Loading the first 10 seconds before playback starts.</p>
-            </div>
-        `;
+        elements.viewerStage.innerHTML = `<div class="viewer-stage__frame is-video"></div>`;
         hydrateViewerVideo(file, rawUrl, display, state.viewerLoadToken);
         return;
     }
@@ -1413,57 +1412,30 @@ function openMediaViewer(fileName) {
     elements.viewerStage.innerHTML = `<div class="viewer-stage__fallback"><div class="icon-asset">FILE</div><p>Preview is not available for this file type.</p></div>`;
 }
 
-async function hydrateViewerVideo(file, url, display, loadToken) {
-    const assignVideo = async (sourceUrl) => {
+function hydrateViewerVideo(file, url, display, loadToken) {
+    if (loadToken !== state.viewerLoadToken || state.viewerTarget !== file.name) return;
+    const frame = elements.viewerStage.querySelector(".viewer-stage__frame");
+    if (!frame) return;
+
+    const viewerVideo = document.createElement("video");
+    viewerVideo.controls = true;
+    viewerVideo.playsInline = true;
+    viewerVideo.preload = "auto";
+    viewerVideo.setAttribute("controlslist", "nodownload");
+    viewerVideo.setAttribute("aria-label", display);
+    viewerVideo.addEventListener("error", () => {
         if (loadToken !== state.viewerLoadToken || state.viewerTarget !== file.name) return;
-        const viewerVideo = document.createElement("video");
-        viewerVideo.src = sourceUrl;
-        viewerVideo.controls = true;
-        viewerVideo.playsInline = true;
-        viewerVideo.preload = "auto";
-        viewerVideo.setAttribute("controlslist", "nodownload");
-        viewerVideo.style.display = "none";
-        elements.viewerStage.querySelector(".viewer-stage__frame")?.appendChild(viewerVideo);
+        elements.viewerNote.textContent = "This video could not be loaded. Try opening the public file link.";
+        console.error("Video playback failed.", viewerVideo.error);
+    }, { once: true });
+    viewerVideo.src = url;
+    frame.appendChild(viewerVideo);
+    attachViewerFormat(viewerVideo, "video");
 
-        const startupReady = await waitForViewerBuffer(viewerVideo, {
-            fileName: file.name,
-            loadToken,
-            seconds: 10,
-            mode: "startup"
-        });
-        if (!startupReady || loadToken !== state.viewerLoadToken || state.viewerTarget !== file.name) return;
-
-        elements.viewerStage.innerHTML = `<div class="viewer-stage__frame is-video"></div>`;
-        const frame = elements.viewerStage.querySelector(".viewer-stage__frame");
-        if (!frame) return;
-        viewerVideo.style.display = "";
-        frame.appendChild(viewerVideo);
-        attachViewerFormat(viewerVideo, "video");
-        elements.viewerNote.textContent = "First 10 seconds buffered. Starting playback.";
-        monitorViewerPlaybackBuffer(viewerVideo, loadToken, file.name);
-
-        try {
-            await viewerVideo.play();
-        } catch {
-            elements.viewerNote.textContent = "First 10 seconds buffered. Tap play if autoplay is blocked.";
-        }
-    };
-
-    try {
-        await assignVideo(url);
-    } catch (error) {
-        console.error(error);
+    viewerVideo.play().catch(() => {
         if (loadToken !== state.viewerLoadToken || state.viewerTarget !== file.name) return;
-        elements.viewerStage.innerHTML = `
-            <div class="viewer-stage__frame is-video">
-                <video src="${escapeHtml(url)}" controls playsinline preload="auto" controlslist="nodownload"></video>
-            </div>
-        `;
-        const viewerVideo = elements.viewerStage.querySelector("video");
-        if (!viewerVideo) return;
-        attachViewerFormat(viewerVideo, "video");
-        elements.viewerNote.textContent = "Using direct playback because optimized buffering was unavailable.";
-    }
+        elements.viewerNote.textContent = "Tap play to start the video.";
+    });
 }
 
 function attachViewerFormat(media, kind) {
@@ -1516,133 +1488,6 @@ function setViewerFormatNote(kind, format, tail = "") {
                 ? "Square image shown in a balanced centered viewer."
                 : "Landscape image shown in a wide viewer layout.";
     elements.viewerNote.textContent = tail ? `${base} ${tail}` : base;
-}
-
-function getBufferedRangeAt(video, time = video.currentTime) {
-    for (let index = 0; index < video.buffered.length; index += 1) {
-        const start = video.buffered.start(index);
-        const end = video.buffered.end(index);
-        if (time >= start - 0.2 && time <= end + 0.2) return { start, end };
-    }
-    return null;
-}
-
-function getBufferedAhead(video, time = video.currentTime) {
-    const range = getBufferedRangeAt(video, time);
-    if (!range) return 0;
-    return Math.max(0, range.end - time);
-}
-
-function hasBidirectionalBuffer(video, seconds = 10) {
-    const time = video.currentTime;
-    const range = getBufferedRangeAt(video, time);
-    if (!range) return false;
-    const neededBack = Math.min(seconds, Math.max(0, time));
-    const remaining = Number.isFinite(video.duration) ? Math.max(0, video.duration - time) : seconds;
-    const neededAhead = Math.min(seconds, remaining);
-    return range.start <= time - neededBack + 0.35 && range.end >= time + neededAhead - 0.35;
-}
-
-function waitForViewerBuffer(video, { fileName, loadToken, seconds = 10, mode = "startup" }) {
-    return new Promise((resolve, reject) => {
-        let settled = false;
-        const isActive = () => loadToken === state.viewerLoadToken && state.viewerTarget === fileName;
-
-        const cleanup = () => {
-            video.removeEventListener("loadedmetadata", checkReady);
-            video.removeEventListener("progress", checkReady);
-            video.removeEventListener("canplay", checkReady);
-            video.removeEventListener("canplaythrough", checkReady);
-            video.removeEventListener("error", fail);
-            window.clearTimeout(timeoutId);
-        };
-
-        const finish = (result) => {
-            if (settled) return;
-            settled = true;
-            cleanup();
-            resolve(result);
-        };
-
-        const fail = (event) => {
-            if (settled) return;
-            settled = true;
-            cleanup();
-            reject(event instanceof Error ? event : new Error("Video buffering failed."));
-        };
-
-        const checkReady = () => {
-            if (!isActive()) return finish(false);
-            if (!Number.isFinite(video.duration) || video.duration <= 0) return;
-
-            if (mode === "startup") {
-                const target = Math.min(seconds, video.duration);
-                if (getBufferedAhead(video, 0) >= target - 0.35) finish(true);
-                return;
-            }
-
-            if (hasBidirectionalBuffer(video, seconds)) finish(true);
-        };
-
-        const timeoutId = window.setTimeout(() => finish(true), 18000);
-        video.addEventListener("loadedmetadata", checkReady);
-        video.addEventListener("progress", checkReady);
-        video.addEventListener("canplay", checkReady);
-        video.addEventListener("canplaythrough", checkReady);
-        video.addEventListener("error", fail);
-        video.load();
-        checkReady();
-    });
-}
-
-function monitorViewerPlaybackBuffer(video, loadToken, fileName) {
-    let rebuffering = false;
-
-    const maybeRebuffer = async () => {
-        if (rebuffering) return;
-        if (loadToken !== state.viewerLoadToken || state.viewerTarget !== fileName) return;
-        if (video.ended || video.seeking) return;
-        const requiredBuffer = Math.min(10, video.duration || 10);
-        if (getBufferedAhead(video) >= requiredBuffer || !Number.isFinite(video.duration)) return;
-
-        rebuffering = true;
-        const shouldResume = !video.paused;
-        video.pause();
-        const frame = elements.viewerStage.querySelector(".viewer-stage__frame");
-        if (frame) frame.classList.add("is-rebuffering");
-        const range = getBufferedRangeAt(video, video.currentTime);
-        const backwardReady = !!range && range.start <= Math.max(0, video.currentTime - requiredBuffer) + 0.35;
-        elements.viewerNote.textContent = backwardReady
-            ? "Rebuffering to keep about 10 seconds ahead."
-            : "Rebuffering to keep about 10 seconds around the playhead.";
-
-        const ready = await waitForViewerBuffer(video, {
-            fileName,
-            loadToken,
-            seconds: requiredBuffer,
-            mode: "playback"
-        });
-
-        rebuffering = false;
-        if (frame) frame.classList.remove("is-rebuffering");
-        if (!ready || loadToken !== state.viewerLoadToken || state.viewerTarget !== fileName) return;
-        const currentFormat = frame?.classList.contains("is-portrait")
-            ? "portrait"
-            : frame?.classList.contains("is-square")
-                ? "square"
-                : "landscape";
-        setViewerFormatNote("video", currentFormat, "Buffered about 10 seconds ahead for smoother playback.");
-        if (shouldResume) {
-            try {
-                await video.play();
-            } catch {
-                elements.viewerNote.textContent = "Buffer ready. Tap play to resume if autoplay is blocked.";
-            }
-        }
-    };
-
-    video.addEventListener("waiting", maybeRebuffer);
-    video.addEventListener("seeking", maybeRebuffer);
 }
 
 function openRenameModal(fileName) {

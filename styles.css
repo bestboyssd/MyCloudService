@@ -5493,35 +5493,41 @@ body[data-theme] .preview-card__reorder {
 }
 
 @media (min-width: 761px) {
-    body[data-theme] .files-list.grid-view .file-card--image .file-card__controls {
+    body[data-theme] .files-list.grid-view .file-card--image .file-card__controls,
+    body[data-theme] .files-list.grid-view .file-card--video .file-card__controls {
         inset: 0;
         align-items: stretch;
         pointer-events: none;
     }
 
-    body[data-theme] .files-list.grid-view .file-card--image .file-card__select {
+    body[data-theme] .files-list.grid-view .file-card--image .file-card__select,
+    body[data-theme] .files-list.grid-view .file-card--video .file-card__select {
         position: absolute;
         top: 8px;
         left: 8px;
     }
 
-    body[data-theme] .files-list.grid-view .file-card--image .file-card__utility {
+    body[data-theme] .files-list.grid-view .file-card--image .file-card__utility,
+    body[data-theme] .files-list.grid-view .file-card--video .file-card__utility {
         display: contents;
     }
 
-    body[data-theme] .files-list.grid-view .file-card--image .file-card__favorite {
+    body[data-theme] .files-list.grid-view .file-card--image .file-card__favorite,
+    body[data-theme] .files-list.grid-view .file-card--video .file-card__favorite {
         position: absolute;
         top: 8px;
         right: 8px;
     }
 
-    body[data-theme] .files-list.grid-view .file-card--image .file-card__menu {
+    body[data-theme] .files-list.grid-view .file-card--image .file-card__menu,
+    body[data-theme] .files-list.grid-view .file-card--video .file-card__menu {
         position: absolute;
         right: 8px;
         bottom: 8px;
     }
 
-    body[data-theme] .files-list.grid-view .file-card--image .file-card__viewer {
+    body[data-theme] .files-list.grid-view .file-card--image .file-card__viewer,
+    body[data-theme] .files-list.grid-view .file-card--video .file-card__viewer {
         padding-bottom: 44px;
     }
 }
