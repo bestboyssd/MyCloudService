@@ -33,6 +33,8 @@ const elements = {
     body: document.body,
     message: $("message"),
     connectionStatus: $("connectionStatus"),
+    brandTitleRow: document.querySelector(".brand-copy__title-row"),
+    heroActions: document.querySelector(".hero__actions"),
     themeToggle: $("themeToggle"),
     settingsBtn: $("settingsBtn"),
     refreshBtn: $("refreshBtn"),
@@ -133,6 +135,8 @@ const state = {
     isLibraryLoading: false,
     isUploading: false,
     isThemeTransitioning: false,
+    mobileViewTransitionToken: 0,
+    mobileViewAnimation: null,
     cancelUploadRequested: false,
     activeUploadRequests: new Set(),
     draggedQueueId: null,
@@ -154,6 +158,8 @@ const state = {
 init();
 
 function init() {
+    placeConnectionStatus();
+    window.addEventListener("resize", placeConnectionStatus);
     syncSettingsForm();
     applyTheme(state.theme, false);
     applyReducedMotion();
@@ -173,6 +179,17 @@ function init() {
         return;
     }
     if (state.settings.autoLoad) loadLibrary({ silent: true, trigger: "load" });
+}
+
+function placeConnectionStatus() {
+    const isMobile = window.matchMedia("(max-width: 760px)").matches;
+    const destination = isMobile ? elements.brandTitleRow : elements.heroActions;
+    if (!destination || elements.connectionStatus.parentElement === destination) return;
+    if (isMobile) {
+        destination.append(elements.connectionStatus);
+    } else {
+        destination.insertBefore(elements.connectionStatus, elements.themeToggle);
+    }
 }
 
 function bindEvents() {
@@ -305,16 +322,83 @@ function bindEvents() {
     window.addEventListener("beforeunload", revokeAllPreviewUrls);
 }
 
-function handleMobileNavigation(event) {
+async function handleMobileNavigation(event) {
     const button = event.target.closest("button[data-mobile-view]");
     if (!button || !elements.mobileNav.contains(button)) return;
+    const currentView = elements.body.dataset.mobileView;
     const view = button.dataset.mobileView === "files" ? "files" : "upload";
-    elements.body.dataset.mobileView = view;
-    elements.mobileNav.querySelectorAll("[data-mobile-view]").forEach((tab) => {
-        const active = tab === button;
-        tab.classList.toggle("is-active", active);
-        tab.setAttribute("aria-pressed", String(active));
-    });
+    const isMobile = window.matchMedia("(max-width: 760px)").matches;
+    const shouldAnimate = view !== currentView
+        && isMobile
+        && !elements.body.classList.contains("reduce-motion")
+        && !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const transitionToken = ++state.mobileViewTransitionToken;
+    let outgoingAnimation = null;
+    state.mobileViewAnimation?.cancel();
+    state.mobileViewAnimation = null;
+
+    const updateView = () => {
+        elements.body.dataset.mobileView = view;
+        elements.mobileNav.querySelectorAll("[data-mobile-view]").forEach((tab) => {
+            const active = tab === button;
+            tab.classList.toggle("is-active", active);
+            tab.setAttribute("aria-pressed", String(active));
+        });
+    };
+
+    if (view !== currentView && shouldAnimate) {
+        const outgoingSection = $(currentView === "files" ? "librarySection" : "uploadPanel");
+        outgoingAnimation = outgoingSection.animate(
+            [
+                { opacity: 1, transform: "translateX(0)" },
+                { opacity: 0, transform: `translateX(${view === "files" ? "-20px" : "20px"})` }
+            ],
+            { duration: 140, easing: "ease-in", fill: "forwards" }
+        );
+        state.mobileViewAnimation = outgoingAnimation;
+        try {
+            await outgoingAnimation.finished;
+        } catch (error) {
+            if (error.name === "AbortError") return;
+            throw error;
+        }
+        if (transitionToken !== state.mobileViewTransitionToken) return;
+    }
+
+    updateView();
+    outgoingAnimation?.cancel();
+    if (state.mobileViewAnimation === outgoingAnimation) {
+        state.mobileViewAnimation = null;
+    }
+    if (view !== currentView && isMobile) {
+        const section = $(view === "files" ? "librarySection" : "uploadPanel");
+        window.scrollTo({
+            top: section.getBoundingClientRect().top + window.scrollY,
+            behavior: "instant"
+        });
+    }
+
+    if (view !== currentView && shouldAnimate) {
+        const incomingSection = $(view === "files" ? "librarySection" : "uploadPanel");
+        const incomingAnimation = incomingSection.animate(
+            [
+                { opacity: 0, transform: `translateX(${view === "files" ? "20px" : "-20px"})` },
+                { opacity: 1, transform: "translateX(0)" }
+            ],
+            { duration: 240, easing: "cubic-bezier(0.2, 0.7, 0.2, 1)" }
+        );
+        state.mobileViewAnimation = incomingAnimation;
+        try {
+            await incomingAnimation.finished;
+        } catch (error) {
+            if (error.name !== "AbortError") throw error;
+        } finally {
+            if (transitionToken === state.mobileViewTransitionToken) {
+                state.mobileViewAnimation = null;
+            }
+        }
+    }
+
     if (view === "files" && !state.isLibraryLoaded && !state.isLibraryLoading) {
         loadLibrary({ silent: true, trigger: "load" });
     }
@@ -449,26 +533,32 @@ function setTheme(theme, persist) {
 async function runThemeTransition(theme, persist) {
     state.isThemeTransitioning = true;
     elements.themeToggle.disabled = true;
-    const surface = document.createElement("div");
-    surface.className = "theme-transition-surface";
-    surface.setAttribute("aria-hidden", "true");
-    surface.style.backgroundColor = theme === "dark" ? "#141a16" : "#f4f6f3";
-    document.body.append(surface);
+    let surface = null;
 
     try {
-        await surface.animate(
-            [{ opacity: 0 }, { opacity: 1 }],
-            { duration: 180, easing: "cubic-bezier(0.2, 0.7, 0.2, 1)", fill: "forwards" }
-        ).finished;
-        setTheme(theme, persist);
-        await surface.animate(
-            [{ opacity: 1 }, { opacity: 0 }],
-            { duration: 220, easing: "cubic-bezier(0.2, 0.7, 0.2, 1)", fill: "forwards" }
-        ).finished;
+        if (typeof document.startViewTransition === "function") {
+            const transition = document.startViewTransition(() => setTheme(theme, persist));
+            await transition.finished;
+        } else {
+            surface = document.createElement("div");
+            surface.className = "theme-transition-surface";
+            surface.setAttribute("aria-hidden", "true");
+            surface.style.backgroundColor = theme === "dark" ? "#141a16" : "#f4f6f3";
+            document.body.append(surface);
+            await surface.animate(
+                [{ opacity: 0 }, { opacity: 1 }],
+                { duration: 180, easing: "cubic-bezier(0.2, 0.7, 0.2, 1)", fill: "forwards" }
+            ).finished;
+            setTheme(theme, persist);
+            await surface.animate(
+                [{ opacity: 1 }, { opacity: 0 }],
+                { duration: 220, easing: "cubic-bezier(0.2, 0.7, 0.2, 1)", fill: "forwards" }
+            ).finished;
+        }
     } catch (error) {
         setTheme(theme, persist);
     } finally {
-        surface.remove();
+        surface?.remove();
         state.isThemeTransitioning = false;
         elements.themeToggle.disabled = false;
     }
@@ -543,7 +633,7 @@ function renderQueue() {
     const selectedCount = state.queue.filter((item) => item.selected).length;
     elements.queueMetric.textContent = `${state.queue.length} file${state.queue.length === 1 ? "" : "s"}`;
     elements.queueSummary.textContent = state.queue.length ? `${state.queue.length} file(s) staged for upload.` : "No files staged yet.";
-    elements.selectionSummary.textContent = `${selectedCount} selected`;
+    elements.selectionSummary.textContent = selectedCount ? `${selectedCount} selected` : "No files selected";
     elements.clearQueueBtn.disabled = state.isUploading || !state.queue.length;
     elements.selectAllBtn.disabled = state.isUploading || !state.queue.length;
     elements.deselectAllBtn.disabled = state.isUploading || !state.queue.length;
@@ -1704,6 +1794,9 @@ function openModal(modal) {
     if (!getOpenModal()) state.modalReturnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     modal.hidden = false;
     modal.setAttribute("aria-hidden", "false");
+    if (modal === elements.settingsModal) {
+        modal.querySelector(".modal__body").scrollTop = 0;
+    }
     document.body.style.overflow = "hidden";
     modal.querySelector("button, input, select, textarea, [href]")?.focus();
 }

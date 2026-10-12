@@ -8,10 +8,10 @@
     <title>My Cloud Service | Storage workspace</title>
     <link rel="icon" type="image/svg+xml" href="icon.svg">
     <link rel="manifest" href="manifest.webmanifest">
-    <link rel="stylesheet" href="styles.css?v=32">
+    <link rel="stylesheet" href="styles.css?v=50">
     <link rel="preconnect" href="https://cdn.jsdelivr.net">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
-    <script src="script.js?v=30" defer></script>
+    <script src="script.js?v=35" defer></script>
 </head>
 <body data-theme="light" data-mobile-view="upload">
     <script>
@@ -35,13 +35,15 @@
                 </div>
                 <div class="brand-copy">
                     <span class="eyebrow">Storage workspace</span>
-                    <h1>My Cloud Service</h1>
+                    <div class="brand-copy__title-row">
+                        <h1>My Cloud Service</h1>
+                        <span id="connectionStatus" class="status-chip" role="status">Checking connection&hellip;</span>
+                    </div>
                     <p>Supabase Storage <span aria-hidden="true">&middot;</span> files bucket</p>
                 </div>
             </div>
 
             <div class="hero__actions">
-                <span id="connectionStatus" class="status-chip" role="status">Checking connection&hellip;</span>
                 <button id="themeToggle" class="button ghost" type="button" aria-label="Switch to dark mode" aria-pressed="false">Dark Mode</button>
                 <button id="settingsBtn" class="button secondary" type="button" aria-haspopup="dialog">Settings</button>
                 <button id="refreshBtn" class="button ghost" type="button" aria-label="Refresh file library">Refresh</button>
@@ -71,7 +73,7 @@
                             <span class="eyebrow">Upload</span>
                             <h2>Add files</h2>
                         </div>
-                        <p class="surface-note">Public bucket &middot; anonymous uploads</p>
+                        <p class="surface-note">Anonymous uploads only</p>
                     </div>
 
                     <label id="uploadArea" class="upload-dropzone" for="fileInput" role="button" tabindex="0" aria-describedby="uploadHint">
@@ -113,7 +115,7 @@
 
                     <div class="queue-summary">
                         <span id="queueSummary">No files staged yet.</span>
-                        <span id="selectionSummary">0 selected</span>
+                        <span id="selectionSummary">No files selected</span>
                     </div>
 
                     <div id="previewList" class="preview-list" aria-live="polite"></div>
