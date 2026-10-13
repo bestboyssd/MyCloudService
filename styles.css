@@ -5849,3 +5849,138 @@ body[data-theme] .preview-card__reorder {
         gap: 6px;
     }
 }
+
+/* v54 single-column phone gallery */
+@media (max-width: 760px) {
+    body[data-theme] .files-list.grid-view,
+    body[data-theme] .files-list.list-view {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 12px;
+    }
+
+    body[data-theme] .files-list.grid-view .file-card,
+    body[data-theme] .files-list.list-view .file-card {
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        border: 1px solid var(--border-soft);
+        border-radius: 18px;
+        background: var(--panel);
+        box-shadow: var(--shadow-md);
+    }
+
+    body[data-theme] .files-list.grid-view .file-card .file-card__viewer,
+    body[data-theme] .files-list.list-view .file-card .file-card__viewer {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        width: 100%;
+        gap: 10px;
+        padding: 10px 10px 8px;
+        text-align: left;
+    }
+
+    body[data-theme] .files-list.grid-view .file-card .file-card__media,
+    body[data-theme] .files-list.list-view .file-card .file-card__media {
+        width: 100%;
+        min-height: 0;
+        aspect-ratio: 16 / 9;
+        padding: 0;
+        overflow: hidden;
+        border: 1px solid var(--border-soft);
+        border-radius: 13px;
+        background: var(--panel-soft);
+    }
+
+    body[data-theme] .files-list.grid-view .file-card .file-card__media img,
+    body[data-theme] .files-list.grid-view .file-card .file-card__media video,
+    body[data-theme] .files-list.list-view .file-card .file-card__media img,
+    body[data-theme] .files-list.list-view .file-card .file-card__media video {
+        display: block;
+        width: 100%;
+        height: 100%;
+        border-radius: 12px;
+        object-fit: cover;
+        background: var(--panel-soft);
+    }
+
+    body[data-theme] .files-list.grid-view .file-card .file-card__body,
+    body[data-theme] .files-list.list-view .file-card .file-card__body {
+        display: grid;
+        gap: 4px;
+        padding: 0 2px 2px;
+    }
+
+    body[data-theme] .files-list.grid-view .file-card .file-card__body h3,
+    body[data-theme] .files-list.list-view .file-card .file-card__body h3 {
+        font-size: 15px;
+        line-height: 1.35;
+    }
+
+    body[data-theme] .files-list.grid-view .file-card .file-card__meta,
+    body[data-theme] .files-list.list-view .file-card .file-card__meta {
+        display: block;
+        overflow: visible;
+        color: var(--text-muted);
+        font-size: 12px;
+        line-height: 1.4;
+        text-overflow: clip;
+        white-space: normal;
+    }
+
+    body[data-theme] .files-list.grid-view .file-card .file-card__controls,
+    body[data-theme] .files-list.list-view .file-card .file-card__controls {
+        position: static;
+        inset: auto;
+        order: 2;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+        min-height: 54px;
+        margin: 0;
+        padding: 6px 10px;
+        border-top: 1px solid var(--border-soft);
+        background: var(--panel-soft);
+        transform: none;
+        pointer-events: auto;
+    }
+
+    body[data-theme] .files-list.grid-view .file-card .file-card__select,
+    body[data-theme] .files-list.grid-view .file-card .file-card__favorite,
+    body[data-theme] .files-list.grid-view .file-card .file-card__menu,
+    body[data-theme] .files-list.list-view .file-card .file-card__select,
+    body[data-theme] .files-list.list-view .file-card .file-card__favorite,
+    body[data-theme] .files-list.list-view .file-card .file-card__menu {
+        position: static;
+        inset: auto;
+        flex: 0 0 42px;
+        width: 42px;
+        min-width: 42px;
+        height: 42px;
+        min-height: 42px;
+        border: 1px solid var(--border-soft);
+        border-radius: 12px;
+        background: var(--panel);
+        box-shadow: none;
+        backdrop-filter: none;
+    }
+
+    body[data-theme] .files-list.grid-view .file-card .file-card__utility,
+    body[data-theme] .files-list.list-view .file-card .file-card__utility {
+        display: flex;
+        width: auto;
+        margin-left: auto;
+        justify-content: flex-end;
+        gap: 8px;
+    }
+
+    body[data-theme] .toolbar__actions #toggleViewBtn {
+        display: none;
+    }
+
+    body[data-theme] .toolbar__actions #selectVisibleBtn {
+        grid-column: 1 / -1;
+        width: 100%;
+    }
+}

@@ -1,8 +1,8 @@
-const CACHE_NAME = "my-cloud-service-shell-v53";
+const CACHE_NAME = "my-cloud-service-shell-v54";
 const SHELL_ASSETS = [
     "./",
     "./index.html",
-    "./styles.css?v=53",
+    "./styles.css?v=54",
     "./script.js?v=36",
     "./manifest.webmanifest",
     "./icon.svg",
