@@ -5984,3 +5984,37 @@ body[data-theme] .preview-card__reorder {
         width: 100%;
     }
 }
+/* Stable phone header alignment and a single empty queue state. */
+@media (max-width: 760px) {
+    body[data-theme] .brand-copy__title-row {
+        display: grid;
+        grid-template-columns: max-content minmax(0, 1fr);
+        align-items: center;
+        gap: 0 8px;
+    }
+    body[data-theme] .brand-copy__title-row h1 {
+        grid-column: 1;
+        grid-row: 1;
+        white-space: nowrap;
+    }
+    body[data-theme] .brand-copy__title-row .status-chip {
+        grid-column: 2;
+        grid-row: 1;
+        justify-self: center;
+        max-width: 100%;
+        margin: 0;
+    }
+    body[data-theme] .queue-summary.is-empty {
+        display: none;
+    }
+}
+@media (max-width: 380px) {
+    body[data-theme] .brand-copy__title-row h1 {
+        font-size: clamp(14px, 4.4vw, 16px);
+    }
+    body[data-theme] .brand-copy__title-row .status-chip {
+        min-height: 25px;
+        padding: 4px 6px;
+        font-size: 9px;
+    }
+}

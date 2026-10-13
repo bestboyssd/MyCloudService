@@ -338,6 +338,8 @@ async function handleMobileNavigation(event) {
         && !elements.body.classList.contains("reduce-motion")
         && !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const transitionToken = ++state.mobileViewTransitionToken;
+    const outgoingOffset = view === "files" ? -14 : 14;
+    const incomingOffset = -outgoingOffset;
     let outgoingAnimation = null;
     state.mobileViewAnimation?.cancel();
     state.mobileViewAnimation = null;
@@ -355,10 +357,10 @@ async function handleMobileNavigation(event) {
         const outgoingSection = $(currentView === "files" ? "librarySection" : "uploadPanel");
         outgoingAnimation = outgoingSection.animate(
             [
-                { opacity: 1, transform: "translateX(0)" },
-                { opacity: 0, transform: `translateX(${view === "files" ? "-20px" : "20px"})` }
+                { opacity: 1, transform: "translate3d(0, 0, 0) scale(1)" },
+                { opacity: 0.4, transform: "translate3d(" + outgoingOffset + "px, 0, 0) scale(0.99)" }
             ],
-            { duration: 140, easing: "ease-in", fill: "forwards" }
+            { duration: 155, easing: "cubic-bezier(0.4, 0, 1, 1)", fill: "forwards" }
         );
         state.mobileViewAnimation = outgoingAnimation;
         try {
@@ -372,9 +374,7 @@ async function handleMobileNavigation(event) {
 
     updateView();
     outgoingAnimation?.cancel();
-    if (state.mobileViewAnimation === outgoingAnimation) {
-        state.mobileViewAnimation = null;
-    }
+    if (state.mobileViewAnimation === outgoingAnimation) state.mobileViewAnimation = null;
     if (view !== currentView && isMobile) {
         const section = $(view === "files" ? "librarySection" : "uploadPanel");
         window.scrollTo({
@@ -387,10 +387,10 @@ async function handleMobileNavigation(event) {
         const incomingSection = $(view === "files" ? "librarySection" : "uploadPanel");
         const incomingAnimation = incomingSection.animate(
             [
-                { opacity: 0, transform: `translateX(${view === "files" ? "20px" : "-20px"})` },
-                { opacity: 1, transform: "translateX(0)" }
+                { opacity: 0.4, transform: "translate3d(" + incomingOffset + "px, 0, 0) scale(0.99)" },
+                { opacity: 1, transform: "translate3d(0, 0, 0) scale(1)" }
             ],
-            { duration: 240, easing: "cubic-bezier(0.2, 0.7, 0.2, 1)" }
+            { duration: 300, easing: "cubic-bezier(0.16, 1, 0.3, 1)" }
         );
         state.mobileViewAnimation = incomingAnimation;
         try {
@@ -398,9 +398,7 @@ async function handleMobileNavigation(event) {
         } catch (error) {
             if (error.name !== "AbortError") throw error;
         } finally {
-            if (transitionToken === state.mobileViewTransitionToken) {
-                state.mobileViewAnimation = null;
-            }
+            if (transitionToken === state.mobileViewTransitionToken) state.mobileViewAnimation = null;
         }
     }
 
@@ -408,7 +406,6 @@ async function handleMobileNavigation(event) {
         loadLibrary({ silent: true, trigger: "load" });
     }
 }
-
 function loadStoredSettings() {
     try {
         return { ...DEFAULT_SETTINGS, ...(JSON.parse(localStorage.getItem(STORAGE_KEYS.settings) || "null") || {}) };
@@ -636,9 +633,13 @@ function handleFiles(fileList) {
 
 function renderQueue() {
     const selectedCount = state.queue.filter((item) => item.selected).length;
-    elements.queueMetric.textContent = `${state.queue.length} file${state.queue.length === 1 ? "" : "s"}`;
-    elements.queueSummary.textContent = state.queue.length ? `${state.queue.length} file(s) staged for upload.` : "No files staged yet.";
-    elements.selectionSummary.textContent = selectedCount ? `${selectedCount} selected` : "No files selected";
+    const hasQueuedFiles = state.queue.length > 0;
+    elements.queueMetric.textContent = state.queue.length + " file" + (state.queue.length === 1 ? "" : "s");
+    elements.queueSummary.closest(".queue-summary").classList.toggle("is-empty", !hasQueuedFiles);
+    elements.queueSummary.textContent = hasQueuedFiles
+        ? state.queue.length + " file" + (state.queue.length === 1 ? "" : "s") + " staged for upload."
+        : "";
+    elements.selectionSummary.textContent = selectedCount + " selected";
     elements.clearQueueBtn.disabled = state.isUploading || !state.queue.length;
     elements.selectAllBtn.disabled = state.isUploading || !state.queue.length;
     elements.deselectAllBtn.disabled = state.isUploading || !state.queue.length;
@@ -1380,6 +1381,7 @@ function openMediaViewer(fileName) {
 
     state.viewerTarget = file.name;
     state.viewerLoadToken += 1;
+    stopViewerPlayback();
     revokeViewerObjectUrl();
     applyViewerShellFormat(null);
     elements.viewerKindPill.textContent = kind === "image" ? "Image" : kind === "video" ? "Video" : "File";
@@ -1432,18 +1434,24 @@ function hydrateViewerVideo(file, url, display, loadToken) {
     frame.appendChild(viewerVideo);
     attachViewerFormat(viewerVideo, "video");
 
-    viewerVideo.play().catch(() => {
+    viewerVideo.play().catch((error) => {
         if (loadToken !== state.viewerLoadToken || state.viewerTarget !== file.name) return;
-        elements.viewerNote.textContent = "Tap play to start the video.";
+        if (viewerVideo.error || error.name === "AbortError") return;
+        if (error.name === "NotAllowedError") {
+            elements.viewerNote.textContent = "Tap play to start the video.";
+        } else if (!viewerVideo.error) {
+            elements.viewerNote.textContent = "Playback could not start. Tap play to retry.";
+        }
     });
 }
 
 function attachViewerFormat(media, kind) {
     const applyFormat = () => {
+        const frame = elements.viewerStage.querySelector(".viewer-stage__frame");
+        if (!media.isConnected || !frame?.contains(media)) return;
         const width = kind === "video" ? media.videoWidth : media.naturalWidth;
         const height = kind === "video" ? media.videoHeight : media.naturalHeight;
-        const frame = elements.viewerStage.querySelector(".viewer-stage__frame");
-        if (!frame || !width || !height) return;
+        if (!width || !height) return;
 
         frame.classList.remove("is-portrait", "is-square", "is-landscape");
         const ratio = width / height;
@@ -2065,9 +2073,19 @@ function syncActionSelection(fileName) {
     elements.actionSelectBtn.classList.toggle("is-active", isSelected);
 }
 
+function stopViewerPlayback() {
+    elements.viewerStage.querySelectorAll("video").forEach((video) => {
+        video.pause();
+        video.removeAttribute("src");
+        video.querySelectorAll("source").forEach((source) => source.removeAttribute("src"));
+        video.load();
+    });
+}
+
 function resetViewer() {
     state.viewerTarget = null;
     state.viewerLoadToken += 1;
+    stopViewerPlayback();
     revokeViewerObjectUrl();
     applyViewerShellFormat(null);
     elements.viewerStage.style.removeProperty("--viewer-media-ratio");
