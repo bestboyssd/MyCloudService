@@ -345,14 +345,21 @@ async function handleMobileNavigation(event) {
     state.mobileViewAnimation?.cancel();
     state.mobileViewAnimation = null;
 
-    const updateView = () => {
-        elements.body.dataset.mobileView = view;
+    const updateTabState = () => {
+        elements.mobileNav.dataset.activeView = view;
         elements.mobileNav.querySelectorAll("[data-mobile-view]").forEach((tab) => {
             const active = tab === button;
             tab.classList.toggle("is-active", active);
             tab.setAttribute("aria-pressed", String(active));
         });
     };
+
+    const updateView = () => {
+        elements.body.dataset.mobileView = view;
+        updateTabState();
+    };
+
+    updateTabState();
 
     if (view !== currentView && shouldAnimate) {
         const outgoingSection = $(currentView === "files" ? "librarySection" : "uploadPanel");
@@ -376,14 +383,6 @@ async function handleMobileNavigation(event) {
     updateView();
     outgoingAnimation?.cancel();
     if (state.mobileViewAnimation === outgoingAnimation) state.mobileViewAnimation = null;
-    if (view !== currentView && isMobile) {
-        const section = $(view === "files" ? "librarySection" : "uploadPanel");
-        window.scrollTo({
-            top: section.getBoundingClientRect().top + window.scrollY,
-            behavior: "instant"
-        });
-    }
-
     if (view !== currentView && shouldAnimate) {
         const incomingSection = $(view === "files" ? "librarySection" : "uploadPanel");
         const incomingAnimation = incomingSection.animate(

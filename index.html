@@ -211,10 +211,12 @@
             </section>
         </main>
 
-        <div id="mobileNav" class="mobile-nav" role="group" aria-label="Workspace sections">
-            <button id="uploadTab" class="mobile-nav__button is-active" type="button" data-mobile-view="upload" aria-controls="uploadPanel" aria-pressed="true">Upload</button>
-            <button id="filesTab" class="mobile-nav__button" type="button" data-mobile-view="files" aria-controls="librarySection" aria-pressed="false">Files</button>
-        </div>
+    </div>
+
+    <div id="mobileNav" class="mobile-nav" data-active-view="upload" role="group" aria-label="Workspace sections">
+        <span class="mobile-nav__indicator" aria-hidden="true"></span>
+        <button id="uploadTab" class="mobile-nav__button is-active" type="button" data-mobile-view="upload" aria-controls="uploadPanel" aria-pressed="true">Upload</button>
+        <button id="filesTab" class="mobile-nav__button" type="button" data-mobile-view="files" aria-controls="librarySection" aria-pressed="false">Files</button>
     </div>
 
     <section id="settingsModal" class="modal settings-modal" hidden aria-labelledby="settingsTitle" aria-modal="true" role="dialog">
