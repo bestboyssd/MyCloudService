@@ -1,4 +1,4 @@
-﻿const CONFIG = {
+const CONFIG = {
     supabaseUrl: "https://dizskzthebdjagikysrk.supabase.co",
     supabasePublishableKey: "sb_publishable_DkTv0gfKCcrVPKmW0-QG6w_YyVjnjXF",
     supabaseAnonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRpenNrenRoZWJkamFnaWt5c3JrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE0NTQ2OTEsImV4cCI6MjEwNzAzMDY5MX0.QXr2MoGI1mJP5oCopOhZYDLqcseMp6YJbT4VN_we44M",
@@ -338,7 +338,8 @@ async function handleMobileNavigation(event) {
         && !elements.body.classList.contains("reduce-motion")
         && !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const transitionToken = ++state.mobileViewTransitionToken;
-    const outgoingOffset = view === "files" ? -14 : 14;
+    const slideDistance = Math.max(34, Math.min(48, Math.round(window.innerWidth * 0.12)));
+    const outgoingOffset = view === "files" ? -slideDistance : slideDistance;
     const incomingOffset = -outgoingOffset;
     let outgoingAnimation = null;
     state.mobileViewAnimation?.cancel();
@@ -358,9 +359,9 @@ async function handleMobileNavigation(event) {
         outgoingAnimation = outgoingSection.animate(
             [
                 { opacity: 1, transform: "translate3d(0, 0, 0) scale(1)" },
-                { opacity: 0.4, transform: "translate3d(" + outgoingOffset + "px, 0, 0) scale(0.99)" }
+                { opacity: 0.62, transform: "translate3d(" + outgoingOffset + "px, 0, 0)" }
             ],
-            { duration: 155, easing: "cubic-bezier(0.4, 0, 1, 1)", fill: "forwards" }
+            { duration: 180, easing: "cubic-bezier(0.4, 0, 1, 1)", fill: "forwards" }
         );
         state.mobileViewAnimation = outgoingAnimation;
         try {
@@ -387,10 +388,10 @@ async function handleMobileNavigation(event) {
         const incomingSection = $(view === "files" ? "librarySection" : "uploadPanel");
         const incomingAnimation = incomingSection.animate(
             [
-                { opacity: 0.4, transform: "translate3d(" + incomingOffset + "px, 0, 0) scale(0.99)" },
+                { opacity: 0.72, transform: "translate3d(" + incomingOffset + "px, 0, 0)" },
                 { opacity: 1, transform: "translate3d(0, 0, 0) scale(1)" }
             ],
-            { duration: 300, easing: "cubic-bezier(0.16, 1, 0.3, 1)" }
+            { duration: 360, easing: "cubic-bezier(0.16, 1, 0.3, 1)" }
         );
         state.mobileViewAnimation = incomingAnimation;
         try {
