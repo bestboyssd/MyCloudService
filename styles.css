@@ -6101,3 +6101,15 @@ body[data-theme] .preview-card__reorder {
         transition-duration: 0.01ms;
     }
 }
+
+/* Keep the phone dock fixed while the active tab changes. */
+@media (max-width: 760px) {
+    body[data-theme] .mobile-nav {
+        position: fixed;
+        inset: auto 12px max(10px, env(safe-area-inset-bottom, 0px));
+        width: min(calc(100vw - 24px), 440px);
+        max-width: 440px;
+        margin-inline: auto;
+        transform: none;
+    }
+}

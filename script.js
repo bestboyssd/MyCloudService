@@ -137,8 +137,6 @@ const state = {
     isLibraryLoading: false,
     isUploading: false,
     isThemeTransitioning: false,
-    mobileViewTransitionToken: 0,
-    mobileViewAnimation: null,
     cancelUploadRequested: false,
     activeUploadRequests: new Set(),
     draggedQueueId: null,
@@ -328,7 +326,7 @@ function bindEvents() {
     window.addEventListener("beforeunload", revokeAllPreviewUrls);
 }
 
-async function handleMobileNavigation(event) {
+function handleMobileNavigation(event) {
     const button = event.target.closest("button[data-mobile-view]");
     if (!button || !elements.mobileNav.contains(button)) return;
     const currentView = elements.body.dataset.mobileView;
@@ -338,13 +336,8 @@ async function handleMobileNavigation(event) {
         && isMobile
         && !elements.body.classList.contains("reduce-motion")
         && !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const transitionToken = ++state.mobileViewTransitionToken;
-    const slideDistance = Math.max(34, Math.min(48, Math.round(window.innerWidth * 0.12)));
-    const outgoingOffset = view === "files" ? -slideDistance : slideDistance;
-    const incomingOffset = -outgoingOffset;
-    let outgoingAnimation = null;
-    state.mobileViewAnimation?.cancel();
-    state.mobileViewAnimation = null;
+
+    if (view === currentView) return;
 
     const updateTabState = () => {
         elements.mobileNav.dataset.activeView = view;
@@ -355,52 +348,15 @@ async function handleMobileNavigation(event) {
         });
     };
 
-    const updateView = () => {
-        elements.body.dataset.mobileView = view;
-        updateTabState();
-    };
-
+    elements.body.dataset.mobileView = view;
     updateTabState();
 
-    if (view !== currentView && shouldAnimate) {
-        const outgoingSection = $(currentView === "files" ? "librarySection" : "uploadPanel");
-        outgoingAnimation = outgoingSection.animate(
-            [
-                { opacity: 1, transform: "translate3d(0, 0, 0) scale(1)" },
-                { opacity: 0.62, transform: "translate3d(" + outgoingOffset + "px, 0, 0)" }
-            ],
-            { duration: 180, easing: "cubic-bezier(0.4, 0, 1, 1)", fill: "forwards" }
+    if (shouldAnimate) {
+        const activeSection = $(view === "files" ? "librarySection" : "uploadPanel");
+        activeSection.animate(
+            [{ opacity: 0.86 }, { opacity: 1 }],
+            { duration: 180, easing: "cubic-bezier(0.16, 1, 0.3, 1)" }
         );
-        state.mobileViewAnimation = outgoingAnimation;
-        try {
-            await outgoingAnimation.finished;
-        } catch (error) {
-            if (error.name === "AbortError") return;
-            throw error;
-        }
-        if (transitionToken !== state.mobileViewTransitionToken) return;
-    }
-
-    updateView();
-    outgoingAnimation?.cancel();
-    if (state.mobileViewAnimation === outgoingAnimation) state.mobileViewAnimation = null;
-    if (view !== currentView && shouldAnimate) {
-        const incomingSection = $(view === "files" ? "librarySection" : "uploadPanel");
-        const incomingAnimation = incomingSection.animate(
-            [
-                { opacity: 0.72, transform: "translate3d(" + incomingOffset + "px, 0, 0)" },
-                { opacity: 1, transform: "translate3d(0, 0, 0) scale(1)" }
-            ],
-            { duration: 360, easing: "cubic-bezier(0.16, 1, 0.3, 1)" }
-        );
-        state.mobileViewAnimation = incomingAnimation;
-        try {
-            await incomingAnimation.finished;
-        } catch (error) {
-            if (error.name !== "AbortError") throw error;
-        } finally {
-            if (transitionToken === state.mobileViewTransitionToken) state.mobileViewAnimation = null;
-        }
     }
 
     if (view === "files" && !state.isLibraryLoaded && !state.isLibraryLoading) {
