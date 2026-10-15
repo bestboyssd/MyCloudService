@@ -97,6 +97,7 @@ const elements = {
     viewerName: $("viewerName"),
     viewerMeta: $("viewerMeta"),
     viewerNote: $("viewerNote"),
+    viewerFallbackLink: $("viewerFallbackLink"),
     viewerShareBtn: $("viewerShareBtn"),
     viewerDownloadBtn: $("viewerDownloadBtn"),
     viewerInfoBtn: $("viewerInfoBtn"),
@@ -1392,6 +1393,8 @@ function openMediaViewer(fileName) {
         : kind === "image"
             ? "Opening full-frame image preview."
             : "Open the public file link from the information panel if you need more actions.";
+    elements.viewerFallbackLink.hidden = true;
+    elements.viewerFallbackLink.removeAttribute("href");
     openModal(elements.viewerModal);
 
     if (kind === "image") {
@@ -1427,7 +1430,7 @@ function hydrateViewerVideo(file, url, display, loadToken) {
     viewerVideo.setAttribute("aria-label", display);
     viewerVideo.addEventListener("error", () => {
         if (loadToken !== state.viewerLoadToken || state.viewerTarget !== file.name) return;
-        elements.viewerNote.textContent = "This video could not be loaded. Try opening the public file link.";
+        showViewerVideoFallback(url);
         console.error("Video playback failed.", viewerVideo.error);
     }, { once: true });
     viewerVideo.src = url;
@@ -1439,10 +1442,18 @@ function hydrateViewerVideo(file, url, display, loadToken) {
         if (viewerVideo.error || error.name === "AbortError") return;
         if (error.name === "NotAllowedError") {
             elements.viewerNote.textContent = "Tap play to start the video.";
+        } else if (error.name === "NotSupportedError") {
+            showViewerVideoFallback(url);
         } else if (!viewerVideo.error) {
             elements.viewerNote.textContent = "Playback could not start. Tap play to retry.";
         }
     });
+}
+
+function showViewerVideoFallback(url) {
+    elements.viewerNote.textContent = "This browser couldn't play this video. Try downloading it or opening the original in a media player.";
+    elements.viewerFallbackLink.href = url;
+    elements.viewerFallbackLink.hidden = false;
 }
 
 function attachViewerFormat(media, kind) {
@@ -2096,6 +2107,8 @@ function resetViewer() {
     elements.viewerName.textContent = "Preview";
     elements.viewerMeta.textContent = "Choose a file to view.";
     elements.viewerNote.textContent = "Open images and videos at full frame with no crop.";
+    elements.viewerFallbackLink.hidden = true;
+    elements.viewerFallbackLink.removeAttribute("href");
 }
 
 function revokeViewerObjectUrl() {

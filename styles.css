@@ -1583,6 +1583,28 @@ body[data-theme="light"] .viewer-footer {
     line-height: 1.45;
 }
 
+.viewer-fallback-link {
+    display: inline-flex;
+    width: fit-content;
+    min-height: 2.5rem;
+    align-items: center;
+    margin-top: 0.15rem;
+    padding: 0.55rem 0.85rem;
+    border: 1px solid var(--border-strong);
+    border-radius: 999px;
+    color: var(--accent-strong);
+    font-weight: 650;
+    text-decoration: none;
+}
+
+.viewer-fallback-link:hover {
+    background: var(--panel-soft);
+}
+
+.viewer-fallback-link[hidden] {
+    display: none;
+}
+
 .media-viewer .modal__backdrop {
     background: rgba(2, 8, 14, 0.74);
     backdrop-filter: blur(12px) saturate(130%);
